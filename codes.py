@@ -208,3 +208,59 @@ def masking( in_label, k, dl,num_of_qudits ):
         remaining = tuple( [ i for i in range( length ) ] ) 
     
     return swapped_matrix
+
+
+def marginal_global_repres( marginal , in_label, k, dl,num_of_qudits ):
+    """
+    dl: local dimension
+    marginal: reduced system with labels given in the tuple "in_label"
+    
+    """
+    
+    swapper_d = swapper(dl) 
+    label = in_label
+    n = num_of_qudits - k
+    # n = num_of_qudits - len( marginal.dims() ) 
+    dims = tuple( [ dl for i in range( num_of_qudits ) ] )
+    swapped_matrix = kron( marginal.data, np.identity( dl**n ) )
+    
+    all_labels = [ i for i in range( num_of_qudits ) ]
+    right_labels = [ i for i in range( list( label )[-1] + 1, num_of_qudits ) ]
+    left_labels = [ i for i in range( list( label )[0] ) ]
+    
+    if left_labels + list( label ) + right_labels == all_labels:
+        nl  = list(label)[0] 
+        nr = num_of_qudits - nl  - len(label)
+        Il, Ir = np.identity( dl**nl ), np.identity( dl**nr )
+        swapped_matrix = kron( Il, marginal.data, Ir )
+        return swapped_matrix
+    else:
+        nl = list(label)[0] 
+        nr = num_of_qudits - nl  - len(label)
+        Il, Ir = np.identity( dl**nl ), np.identity( dl**nr )
+        swapped_matrix = kron( Il, marginal.data, Ir )
+        label = tuple( left_labels + list( label ) )
+        
+    length = len( label )
+    remaining = tuple( [ i for i in range( length ) ] )
+    
+    while length > 0 and label != remaining:
+        
+        last = label[-1]
+        numOfswapps = np.abs( last  - length ) 
+        l1, l2 = length - 1, num_of_qudits - ( length + 1 )
+        I1, I2 = np.identity( dl**l1 ), np.identity( dl**l2 )
+        gate = kron( I1, swapper_d, I2 ) 
+        swapped_matrix = gate @ swapped_matrix @ gate
+        
+        for i in range( numOfswapps ):
+            l1, l2 = l1 + 1, l2 - 1 
+            I1, I2 = np.identity( dl**l1 ), np.identity( dl**l2 )
+            gate = kron( I1, swapper_d, I2 )
+            swapped_matrix = gate @ swapped_matrix @ gate
+
+        label = tuple( list( label[:-1] ) )
+        length = len( label )
+        remaining = tuple( [ i for i in range( length ) ] ) 
+    
+    return swapped_matrix
